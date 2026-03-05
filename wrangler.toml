@@ -1,0 +1,11 @@
+name = "oref-proxy"
+main = "proxy.mjs"
+compatibility_date = "2026-03-05"
+
+[observability]
+enabled = true
+
+[assets]
+directory = "."
+binding = "ASSETS"
+run_worker_first = true
