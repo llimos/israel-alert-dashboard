@@ -1,6 +1,4 @@
-import { createServer } from "http";
-
-const PORT = 3000;
+// proxy.mjs — Cloudflare Worker (ES Module)
 
 const OREF_HEADERS = {
   "User-Agent": "Mozilla/5.0",
@@ -8,13 +6,12 @@ const OREF_HEADERS = {
   "X-Requested-With": "XMLHttpRequest",
 };
 
-const UPSTREAM = {
-  "/oref": fetchMergedAlerts,
-  "/emess": () => fetchRaw("https://www.emess.co.il/Online/Feed/0", { "User-Agent": "Mozilla/5.0" }),
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Content-Type": "application/json",
 };
 
 // ── Fetching ──────────────────────────────────────────────────────────────
-
 async function fetchRaw(url, headers) {
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
@@ -27,7 +24,6 @@ async function fetchJson(url, headers) {
 }
 
 // ── Alert normalization ───────────────────────────────────────────────────
-
 function normalizeAlert(item) {
   return {
     alertDate: item.alertDate,
@@ -60,7 +56,6 @@ async function fetchMergedAlerts() {
 
   const fromPrimary =
     primary.status === "fulfilled" && Array.isArray(primary.value) ? primary.value.map(normalizeAlert) : [];
-
   const fromHistory =
     history.status === "fulfilled" && Array.isArray(history.value) ? history.value.map(normalizeAlert) : [];
 
@@ -71,38 +66,34 @@ async function fetchMergedAlerts() {
   return JSON.stringify(deduplicateAlerts([...fromPrimary, ...fromHistory]));
 }
 
-// ── Server ────────────────────────────────────────────────────────────────
+// ── Route map ─────────────────────────────────────────────────────────────
+const ROUTES = {
+  "/oref": fetchMergedAlerts,
+  "/emess": () => fetchRaw("https://www.emess.co.il/Online/Feed/0", { "User-Agent": "Mozilla/5.0" }),
+};
 
-createServer(async (req, res) => {
-  const path = new URL(req.url, "http://localhost").pathname;
+// ── Worker entry point ────────────────────────────────────────────────────
+export default {
+  async fetch(request, env, ctx) {
+    const { pathname } = new URL(request.url);
 
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, { "Access-Control-Allow-Origin": "*" });
-    res.end();
-    return;
-  }
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*" } });
+    }
 
-  const handler = UPSTREAM[path];
+    const handler = ROUTES[pathname];
+    if (!handler) {
+      return new Response("Not found", { status: 404 });
+    }
 
-  if (!handler) {
-    res.writeHead(404);
-    res.end("Not found");
-    return;
-  }
-
-  try {
-    const body = await handler();
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    });
-    res.end(typeof body === "string" ? body : JSON.stringify(body));
-  } catch (err) {
-    res.writeHead(502);
-    res.end(`Upstream error: ${err.message}`);
-  }
-}).listen(PORT, () => {
-  console.log(`Proxy running at http://localhost:${PORT}`);
-  console.log(`  /oref  → merged AlertsHistory.json + GetAlarmsHistory.aspx`);
-  console.log(`  /emess → emess.co.il/Online/Feed/0`);
-});
+    try {
+      const body = await handler();
+      return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+        status: 200,
+        headers: CORS_HEADERS,
+      });
+    } catch (err) {
+      return new Response(`Upstream error: ${err.message}`, { status: 502 });
+    }
+  },
+};
