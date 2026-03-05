@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IL Alerts Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+Hebrew:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0b0d;
+            --surface: #111318;
+            --border: #1e2230;
+            --dim: #6b7280;
+            --text: #d4d8e8;
+            --bright: #f0f2fa;
+            --accent: #e8c84a;
+            --red: #ff3b3b;
+            --green: #2dcc70;
+            --mono: 'Share Tech Mono', monospace;
+            --hebrew: 'Noto Sans Hebrew', sans-serif;
+            --font-size-xs: 9px;
+            --font-size-sm: 10px;
+            --font-size-base: 11px;
+            --font-size-md: 13px;
+            --font-size-lg: 14px;
+            --font-size-xl: 15px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--mono);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: var(--font-size-md);
+            letter-spacing: 0.2em;
+            color: var(--bright);
+        }
+
+        h1 em {
+            color: var(--accent);
+            font-style: normal;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: var(--font-size-sm);
+            color: #9aa0b0;
+        }
+
+        select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: var(--font-size-sm);
+            padding: 2px 6px;
+        }
+
+        #clock {
+            color: var(--bright);
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .live-dot.error {
+            background: var(--red);
+            box-shadow: 0 0 8px var(--red);
+        }
+
+        @keyframes pulse {
+            50% {
+                box-shadow: 0 0 16px;
+            }
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        section {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-left: 1px solid var(--border);
+        }
+
+        section:first-child {
+            border-left: none;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            flex-shrink: 0;
+            font-size: var(--font-size-sm);
+        }
+
+        .panel-title {
+            letter-spacing: 0.15em;
+            color: var(--accent);
+        }
+
+        .panel-updated {
+            color: #9aa0b0;
+        }
+
+        .filter-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            color: #9aa0b0;
+            font-size: var(--font-size-xs);
+        }
+
+        .card-list {
+            overflow-y: auto;
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .card-list::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .card-list::-webkit-scrollbar-thumb {
+            background: var(--dim);
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-right: 3px solid var(--dim);
+            padding: 14px 16px;
+            animation: slide-in 0.2s ease;
+        }
+
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateX(8px);
+            }
+        }
+
+        .card.active {
+            border-right-color: var(--red);
+        }
+
+        .card.resolved {
+            border-right-color: var(--green);
+            opacity: 0.65;
+        }
+
+        .card.image {
+            border-right-color: #4a7cff;
+        }
+
+        .card.video {
+            border-right-color: #c44aff;
+        }
+
+        .card-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .card-title {
+            font-family: var(--hebrew);
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--bright);
+            line-height: 1.4;
+        }
+
+        .card-body {
+            font-family: var(--hebrew);
+            font-size: var(--font-size-lg);
+            color: var(--bright);
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: var(--font-size-sm);
+            color: #9aa0b0;
+        }
+
+        .card-author {
+            color: var(--accent);
+        }
+
+        .tag {
+            font-size: var(--font-size-xs);
+            letter-spacing: 0.1em;
+            padding: 2px 6px;
+            border-radius: 2px;
+            border: 1px solid;
+            flex-shrink: 0;
+        }
+
+        .tag.active {
+            color: var(--red);
+            border-color: rgba(255, 59, 59, 0.4);
+            background: rgba(255, 59, 59, 0.1);
+        }
+
+        .tag.resolved {
+            color: var(--green);
+            border-color: rgba(45, 204, 112, 0.4);
+            background: rgba(45, 204, 112, 0.08);
+        }
+
+        .tag.expected {
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.4);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .tag.other {
+            color: var(--accent);
+            border-color: rgba(232, 200, 74, 0.4);
+            background: rgba(232, 200, 74, 0.08);
+        }
+
+        .tag.text {
+            color: #8b95a8;
+            border-color: var(--border);
+        }
+
+        .tag.image {
+            color: #4a7cff;
+            border-color: rgba(74, 124, 255, 0.4);
+            background: rgba(74, 124, 255, 0.1);
+        }
+
+        .tag.video {
+            color: #c44aff;
+            border-color: rgba(196, 74, 255, 0.4);
+            background: rgba(196, 74, 255, 0.1);
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-sm);
+            letter-spacing: 0.15em;
+            color: var(--dim);
+        }
+
+        .error-banner {
+            padding: 6px 14px;
+            font-size: var(--font-size-xs);
+            color: var(--red);
+            background: rgba(255, 59, 59, 0.06);
+            border-bottom: 1px solid rgba(255, 59, 59, 0.2);
+        }
+
+        footer {
+            display: flex;
+            align-items: center;
+            height: 28px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .ticker-label {
+            background: var(--accent);
+            color: #000;
+            font-size: var(--font-size-xs);
+            font-weight: bold;
+            letter-spacing: 0.15em;
+            padding: 0 12px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .ticker-scroll {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #ticker-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 32px;
+            font-size: var(--font-size-sm);
+            white-space: nowrap;
+            animation: scroll-left 40s linear infinite;
+        }
+
+        @keyframes scroll-left {
+            to {
+                transform: translateX(-50%);
+            }
+        }
+
+        .ticker-item {
+            font-family: var(--hebrew);
+        }
+
+        .ticker-sep {
+            color: var(--dim);
+        }
+
+        .settings-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            padding: 4px 10px;
+            font-family: var(--mono);
+            font-size: var(--font-size-sm);
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+
+        .settings-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            font-size: var(--font-size-md);
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: var(--accent);
+        }
+
+        .modal-content {
+            padding: 16px;
+        }
+
+        .setting-group {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .setting-label {
+            font-size: var(--font-size-sm);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--text);
+            text-transform: uppercase;
+        }
+
+        .setting-input,
+        .setting-select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 8px;
+            font-family: var(--mono);
+            font-size: var(--font-size-sm);
+            border-radius: 2px;
+        }
+
+        .setting-input:focus,
+        .setting-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .setting-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            align-self: flex-start;
+        }
+
+        .setting-checkbox input {
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .setting-checkbox label {
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+        }
+
+        .setting-slider {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-slider input[type="range"] {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .setting-slider input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        .setting-slider input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+        }
+
+        .setting-value {
+            font-size: var(--font-size-sm);
+            color: var(--dim);
+            min-width: 35px;
+            text-align: right;
+        }
+
+        .file-input-wrapper {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: var(--mono);
+            font-size: var(--font-size-sm);
+            font-weight: bold;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .file-input-label:hover {
+            background: #f5d75f;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-name {
+            color: var(--text);
+            font-size: var(--font-size-sm);
+            word-break: break-all;
+            margin-top: 4px;
+        }
+
+        .sound-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .sound-card-title {
+            font-size: var(--font-size-sm);
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>IL<em>//</em>ALERTS</h1>
+        <div class="header-controls">
+            <span id="clock"></span>
+            <button class="settings-btn" id="settings-btn">⚙ Settings</button>
+            <div class="live-dot" id="live-dot"></div>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <div class="panel-header">
+                <span class="panel-title">OREF — Alert History</span>
+                <span class="panel-updated" id="oref-updated"></span>
+            </div>
+            <div id="oref-error" class="error-banner" hidden></div>
+            <div class="card-list" id="oref-list">
+                <div class="empty-state">Loading…</div>
+            </div>
+        </section>
+
+        <section>
+            <div class="panel-header">
+                <span class="panel-title">Emess — Live Feed</span>
+                <span class="panel-updated" id="emess-updated"></span>
+            </div>
+            <div id="emess-error" class="error-banner" hidden></div>
+            <div class="card-list" id="emess-list">
+                <div class="empty-state">Loading…</div>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal-backdrop" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Settings</div>
+                <button class="modal-close" id="modal-close">✕</button>
+            </div>
+            <div class="modal-content">
+                <div class="setting-group">
+                    <label class="setting-label">Polling Interval</label>
+                    <select id="settings-poll-interval" class="setting-select">
+                        <option value="5000">5 seconds</option>
+                        <option value="10000" selected>10 seconds</option>
+                        <option value="30000">30 seconds</option>
+                        <option value="60000">60 seconds</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Location Filter</label>
+                    <input type="text" id="settings-location-filter" class="setting-input" placeholder="e.g., בית שמש">
+                    <small style="color: var(--dim); font-size: 9px;">Leave empty to show all alerts</small>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Font Size</label>
+                    <div class="setting-slider">
+                        <input type="range" id="settings-font-size" dir="ltr" min="80" max="150" value="100">
+                        <span class="setting-value"><span id="font-size-value">100</span>%</span>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-checkbox">
+                        <input type="checkbox" id="settings-sound-enabled" checked>
+                        <label for="settings-sound-enabled">Enable Alert Sounds</label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Custom Alert Sounds</label>
+                    <small style="color: var(--dim); font-size: 9px; display: block; margin-bottom: 8px;">Upload MP3
+                        files for different alert types (optional, overrides tone)</small>
+
+                    <div class="sound-card">
+                        <div class="sound-card-title">🔴 Active Alert</div>
+                        <div class="file-input-wrapper">
+                            <label class="file-input-label" for="sound-active-upload">Choose MP3</label>
+                            <input type="file" id="sound-active-upload" accept=".mp3,audio/mpeg" />
+                        </div>
+                        <div class="file-name" id="sound-active-name"></div>
+                        <button id="sound-active-test"
+                            style="margin-top: 6px; padding: 4px 8px; background: var(--accent); color: #000; border: none; border-radius: 2px; cursor: pointer; font-family: var(--mono); font-size: var(--font-size-sm); font-weight: bold;">Test</button>
+                    </div>
+
+                    <div class="sound-card">
+                        <div class="sound-card-title">🟢 Resolved Alert</div>
+                        <div class="file-input-wrapper">
+                            <label class="file-input-label" for="sound-resolved-upload">Choose MP3</label>
+                            <input type="file" id="sound-resolved-upload" accept=".mp3,audio/mpeg" />
+                        </div>
+                        <div class="file-name" id="sound-resolved-name"></div>
+                        <button id="sound-resolved-test"
+                            style="margin-top: 6px; padding: 4px 8px; background: var(--accent); color: #000; border: none; border-radius: 2px; cursor: pointer; font-family: var(--mono); font-size: var(--font-size-sm); font-weight: bold;">Test</button>
+                    </div>
+
+                    <div class="sound-card">
+                        <div class="sound-card-title">🟠 Expected Alert</div>
+                        <div class="file-input-wrapper">
+                            <label class="file-input-label" for="sound-expected-upload">Choose MP3</label>
+                            <input type="file" id="sound-expected-upload" accept=".mp3,audio/mpeg" />
+                        </div>
+                        <div class="file-name" id="sound-expected-name"></div>
+                        <button id="sound-expected-test"
+                            style="margin-top: 6px; padding: 4px 8px; background: var(--accent); color: #000; border: none; border-radius: 2px; cursor: pointer; font-family: var(--mono); font-size: var(--font-size-sm); font-weight: bold;">Test</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Fallback Sound Type</label>
+                    <select id="settings-sound-type" class="setting-select">
+                        <option value="sine">Simple Beep (Sine)</option>
+                        <option value="square">Sharp Alert (Square)</option>
+                        <option value="sawtooth">Harsh Alert (Sawtooth)</option>
+                        <option value="double">Double Beep</option>
+                    </select>
+                    <small style="color: var(--dim); font-size: 9px; display: block; margin-top: 4px;">Used when no
+                        custom MP3 is uploaded</small>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Alert Volume</label>
+                    <div class="setting-slider">
+                        <input type="range" id="settings-volume" dir="ltr" min="0" max="100" value="30">
+                        <span class="setting-value"><span id="volume-value">30</span>%</span>
+                    </div>
+                    <button id="test-sound-btn"
+                        style="margin-top: 8px; padding: 6px 12px; background: var(--accent); color: #000; border: none; border-radius: 2px; cursor: pointer; font-family: var(--mono); font-size: var(--font-size-sm); font-weight: bold; transition: all 0.2s; width: fit-content;">Test
+                        Fallback Sound</button>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-checkbox">
+                        <input type="checkbox" id="settings-notifications-enabled">
+                        <label for="settings-notifications-enabled">Enable Desktop Notifications</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="ticker-label">LIVE</div>
+        <div class="ticker-scroll">
+            <div id="ticker-inner"><span class="ticker-sep">—</span></div>
+        </div>
+    </footer>
+
+    <script>
+        // ── Configuration ─────────────────────────────────────────────────────────
+        const CONFIG = {
+            api: {
+                orefUrl: 'http://localhost:3000/oref',
+                emessUrl: 'http://localhost:3000/emess'
+            },
+            categories: {
+                alert: { ACTIVE: 1, RESOLVED: 13, EXPECTED: 14 },
+                feed: { TEXT: 1, IMAGE: 2, VIDEO: 3 }
+            },
+            audio: {
+                frequency: 800,
+                duration: 0.5,
+                gainStart: 0.3,
+                gainEnd: 0.01,
+                defaultVolume: 30
+            },
+            ui: {
+                panelTitles: {
+                    alerts: 'OREF — Alert History',
+                    feed: 'Emess — Live Feed',
+                    live: 'LIVE'
+                },
+                empty: {
+                    alerts: 'No alerts',
+                    feed: 'No posts',
+                    loading: 'Loading…'
+                },
+                labels: {
+                    updating: 'Updated '
+                },
+                tickerAlertCount: 20
+            },
+            defaults: {
+                locationFilter: 'בית שמש',
+                feedCategory: 'אונליין',
+                pollInterval: 10000,
+                fontSizePercent: 100,
+                soundEnabled: true,
+                soundType: 'sine',
+                volume: 30,
+                soundUrls: {
+                    active: null,
+                    resolved: null,
+                    expected: null
+                },
+                soundFileNames: {
+                    active: null,
+                    resolved: null,
+                    expected: null
+                },
+                notificationsEnabled: false
+            },
+            timing: {
+                clockUpdateMs: 1000,
+                tickerDurationS: 40
+            }
+        };
+
+        const ALERT_CATEGORY = CONFIG.categories.alert;
+        const FEED_TYPE = CONFIG.categories.feed;
+
+        let mostRecentAlertId = null;
+        let mostRecentAlertCategory = null;
+        let mostRecentAlertDate = null;
+        let mostRecentFeedId = null;
+        let audioContext = null;
+        let currentPlayingAudios = {}; // Track playing audio by button ID
+        let testSoundPlaying = false; // Track if fallback test is playing
+
+        // Settings state
+        let settings = {};
+
+        function stopAudio(sourceId) {
+            if (currentPlayingAudios[sourceId]) {
+                const audio = currentPlayingAudios[sourceId];
+                audio.pause();
+                audio.currentTime = 0;
+                delete currentPlayingAudios[sourceId];
+                return true;
+            }
+            return false;
+        }
+
+        function playAlertSound(category = null, sourceId = null) {
+            if (!settings.soundEnabled) return;
+
+            // Determine which sound to play
+            let soundUrl = null;
+            if (category === ALERT_CATEGORY.ACTIVE && settings.soundUrls?.active) {
+                soundUrl = settings.soundUrls.active;
+            } else if (category === ALERT_CATEGORY.RESOLVED && settings.soundUrls?.resolved) {
+                soundUrl = settings.soundUrls.resolved;
+            } else if (category === ALERT_CATEGORY.EXPECTED && settings.soundUrls?.expected) {
+                soundUrl = settings.soundUrls.expected;
+            }
+
+            if (soundUrl) {
+                // Check if already playing
+                if (sourceId && currentPlayingAudios[sourceId]) {
+                    stopAudio(sourceId);
+                    return;
+                }
+
+                // Play uploaded MP3 file
+                const audio = new Audio(soundUrl);
+                audio.volume = settings.volume / 100;
+                if (sourceId) currentPlayingAudios[sourceId] = audio;
+                audio.play().catch(err => console.error('Error playing audio:', err));
+
+                // Clean up when finished
+                audio.onended = () => {
+                    if (sourceId) {
+                        delete currentPlayingAudios[sourceId];
+                        updateTestButtonUI(sourceId, false);
+                    }
+                };
+            } else {
+                // Fallback to generated tone
+                playGeneratedTone(sourceId);
+            }
+        }
+
+        function playGeneratedTone(sourceId = null) {
+            // Check if already playing fallback tone
+            if (testSoundPlaying) {
+                testSoundPlaying = false;
+                return;
+            }
+
+            testSoundPlaying = true;
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const volume = settings.volume / 100;
+            const playBeep = (delay = 0) => {
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                oscillator.connect(gain);
+                gain.connect(audioContext.destination);
+
+                oscillator.frequency.value = CONFIG.audio.frequency;
+                oscillator.type = settings.soundType === 'double' ? 'sine' : settings.soundType;
+
+                const startTime = audioContext.currentTime + delay;
+                gain.gain.setValueAtTime(CONFIG.audio.gainStart * volume, startTime);
+                gain.gain.exponentialRampToValueAtTime(CONFIG.audio.gainEnd * volume, startTime + CONFIG.audio.duration);
+
+                oscillator.start(startTime);
+                oscillator.stop(startTime + CONFIG.audio.duration);
+            };
+
+            if (settings.soundType === 'double') {
+                playBeep(0);
+                playBeep(0.15);
+            } else {
+                playBeep();
+            }
+
+            // Mark as finished after tone duration
+            const duration = settings.soundType === 'double' ? 0.35 : CONFIG.audio.duration;
+            setTimeout(() => {
+                testSoundPlaying = false;
+                if (sourceId) {
+                    updateTestButtonUI(sourceId, false);
+                }
+            }, (duration + 0.2) * 1000);
+        }
+
+        function updateTestButtonUI(buttonId, isPlaying) {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+
+            if (isPlaying) {
+                button.textContent = '⏹ Stop';
+                button.style.background = '#ff6b6b';
+            } else {
+                button.textContent = 'Test';
+                button.style.background = 'var(--accent)';
+            }
+        }
+
+        function showNotification(title, options = {}) {
+            if (!settings.notificationsEnabled) return;
+            if (!('Notification' in window)) return;
+
+            if (Notification.permission === 'granted') {
+                new Notification(title, options);
+            }
+        }
+
+
+        // ── Utilities ─────────────────────────────────────────────────────────────
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function formatDateTime(str) {
+            const date = new Date(str.replace(' ', 'T'));
+            if (isNaN(date)) return str;
+
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hour = String(date.getHours()).padStart(2, '0');
+            const minute = String(date.getMinutes()).padStart(2, '0');
+            const second = String(date.getSeconds()).padStart(2, '0');
+
+            return `${day}/${month}/${year} <strong>${hour}:${minute}:${second}</strong>`;
+        }
+
+        function currentTime() {
+            return new Date().toLocaleTimeString('he-IL', { hour12: false });
+        }
+
+
+        // ── Settings Management ───────────────────────────────────────────────────
+
+        function loadSettings() {
+            const saved = localStorage.getItem('alertDashboardSettings');
+            const loaded = saved ? JSON.parse(saved) : {};
+            settings = { ...CONFIG.defaults, ...loaded };
+            updateSoundFileNames();
+            applySettings();
+        }
+
+        function saveSettings() {
+            localStorage.setItem('alertDashboardSettings', JSON.stringify(settings));
+        }
+
+        function updateSoundFileNames() {
+            const displayFileName = (fileName, elementId) => {
+                const el = document.getElementById(elementId);
+                if (!fileName) {
+                    el.textContent = '';
+                    return;
+                }
+                el.textContent = '✓ ' + fileName;
+                el.style.color = 'var(--green)';
+            };
+            displayFileName(settings.soundFileNames?.active, 'sound-active-name');
+            displayFileName(settings.soundFileNames?.resolved, 'sound-resolved-name');
+            displayFileName(settings.soundFileNames?.expected, 'sound-expected-name');
+        }
+
+        function applySettings() {
+            // Font size - update CSS variables
+            const scale = settings.fontSizePercent / 100;
+            document.documentElement.style.setProperty('--font-size-xs', (9 * scale) + 'px');
+            document.documentElement.style.setProperty('--font-size-sm', (10 * scale) + 'px');
+            document.documentElement.style.setProperty('--font-size-base', (11 * scale) + 'px');
+            document.documentElement.style.setProperty('--font-size-md', (13 * scale) + 'px');
+            document.documentElement.style.setProperty('--font-size-lg', (14 * scale) + 'px');
+            document.documentElement.style.setProperty('--font-size-xl', (15 * scale) + 'px');
+            document.getElementById('settings-volume').value = settings.volume;
+            document.getElementById('volume-value').textContent = settings.volume;
+            document.getElementById('settings-notifications-enabled').checked = settings.notificationsEnabled;
+        }
+
+        // ── Modal Controls ────────────────────────────────────────────────────────
+
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            document.getElementById('settings-modal').classList.add('active');
+        });
+
+        document.getElementById('modal-close').addEventListener('click', () => {
+            document.getElementById('settings-modal').classList.remove('active');
+        });
+
+        document.getElementById('settings-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'settings-modal') {
+                document.getElementById('settings-modal').classList.remove('active');
+            }
+        });
+
+        // Settings change handlers
+        document.getElementById('settings-poll-interval').addEventListener('change', (e) => {
+            settings.pollInterval = Number(e.target.value);
+            saveSettings();
+            startPolling();
+        });
+
+        document.getElementById('settings-location-filter').addEventListener('change', (e) => {
+            settings.locationFilter = e.target.value;
+            saveSettings();
+            // Reset mostRecentAlertId to prevent false sound trigger from filter change
+            mostRecentAlertId = null;
+            applyAlertsFilter();
+        });
+
+        document.getElementById('settings-font-size').addEventListener('input', (e) => {
+            settings.fontSizePercent = Number(e.target.value);
+            document.getElementById('font-size-value').textContent = settings.fontSizePercent;
+            applySettings();
+            saveSettings();
+        });
+
+        document.getElementById('settings-sound-enabled').addEventListener('change', (e) => {
+            settings.soundEnabled = e.target.checked;
+            saveSettings();
+        });
+
+        document.getElementById('settings-sound-type').addEventListener('change', (e) => {
+            settings.soundType = e.target.value;
+            saveSettings();
+        });
+
+        document.getElementById('settings-volume').addEventListener('input', (e) => {
+            settings.volume = Number(e.target.value);
+            document.getElementById('volume-value').textContent = settings.volume;
+            saveSettings();
+        });
+
+        document.getElementById('settings-notifications-enabled').addEventListener('change', (e) => {
+            settings.notificationsEnabled = e.target.checked;
+            if (settings.notificationsEnabled && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+            saveSettings();
+        });
+
+        // File upload handlers
+        const handleFileUpload = (inputId, settingsKey, nameElementId) => {
+            document.getElementById(inputId).addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    settings.soundUrls[settingsKey] = event.target.result;
+                    settings.soundFileNames[settingsKey] = file.name;
+                    saveSettings();
+                    updateSoundFileNames();
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        handleFileUpload('sound-active-upload', 'active', 'sound-active-name');
+        handleFileUpload('sound-resolved-upload', 'resolved', 'sound-resolved-name');
+        handleFileUpload('sound-expected-upload', 'expected', 'sound-expected-name');
+
+        // Test buttons for custom sounds
+        document.getElementById('sound-active-test').addEventListener('click', () => {
+            const isPlaying = currentPlayingAudios['sound-active-test'] ? true : false;
+            if (isPlaying) {
+                stopAudio('sound-active-test');
+                updateTestButtonUI('sound-active-test', false);
+            } else {
+                playAlertSound(ALERT_CATEGORY.ACTIVE, 'sound-active-test');
+                updateTestButtonUI('sound-active-test', true);
+            }
+        });
+
+        document.getElementById('sound-resolved-test').addEventListener('click', () => {
+            const isPlaying = currentPlayingAudios['sound-resolved-test'] ? true : false;
+            if (isPlaying) {
+                stopAudio('sound-resolved-test');
+                updateTestButtonUI('sound-resolved-test', false);
+            } else {
+                playAlertSound(ALERT_CATEGORY.RESOLVED, 'sound-resolved-test');
+                updateTestButtonUI('sound-resolved-test', true);
+            }
+        });
+
+        document.getElementById('sound-expected-test').addEventListener('click', () => {
+            const isPlaying = currentPlayingAudios['sound-expected-test'] ? true : false;
+            if (isPlaying) {
+                stopAudio('sound-expected-test');
+                updateTestButtonUI('sound-expected-test', false);
+            } else {
+                playAlertSound(ALERT_CATEGORY.EXPECTED, 'sound-expected-test');
+                updateTestButtonUI('sound-expected-test', true);
+            }
+        });
+
+        // Test button for fallback tone
+        document.getElementById('test-sound-btn').addEventListener('click', () => {
+            if (testSoundPlaying) {
+                testSoundPlaying = false;
+                updateTestButtonUI('test-sound-btn', false);
+            } else {
+                playGeneratedTone('test-sound-btn');
+                updateTestButtonUI('test-sound-btn', true);
+            }
+        });
+
+        // ── Clock ─────────────────────────────────────────────────────────────────
+
+        setInterval(() => {
+            document.getElementById('clock').textContent = currentTime();
+        }, CONFIG.timing.clockUpdateMs);
+
+
+        // ── Fetching ──────────────────────────────────────────────────────────────
+
+        async function fetchJson(url) {
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        }
+
+        async function fetchAndRender(url, renderFn, ids) {
+            const errorEl = document.getElementById(ids.error);
+            const updatedEl = document.getElementById(ids.updated);
+            try {
+                const data = await fetchJson(url);
+                errorEl.hidden = true;
+                updatedEl.textContent = `Updated ${currentTime()}`;
+                renderFn(data);
+                return true;
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.hidden = false;
+                return false;
+            }
+        }
+
+
+        // ── OREF alerts ───────────────────────────────────────────────────────────
+
+        function alertCardClass(category) {
+            if (category === ALERT_CATEGORY.ACTIVE) return 'active';
+            if (category === ALERT_CATEGORY.RESOLVED) return 'resolved';
+            return '';
+        }
+
+        function alertTagClass(category) {
+            if (category === ALERT_CATEGORY.ACTIVE) return 'active';
+            if (category === ALERT_CATEGORY.RESOLVED) return 'resolved';
+            if (category === ALERT_CATEGORY.EXPECTED) return 'expected';
+            return 'other';
+        }
+
+        function alertTagLabel(category) {
+            if (category === ALERT_CATEGORY.ACTIVE) return 'ACTIVE';
+            if (category === ALERT_CATEGORY.RESOLVED) return 'RESOLVED';
+            if (category === ALERT_CATEGORY.EXPECTED) return 'EXPECTED';
+            return `CAT-${category}`;
+        }
+
+        function alertCard({ category, title, data, alertDate }) {
+            return `
+    <div class="card ${alertCardClass(category)}">
+      <div class="card-row">
+        <div class="card-title">${escapeHtml(title)}</div>
+        <span class="tag ${alertTagClass(category)}">${alertTagLabel(category)}</span>
+      </div>
+      <div class="card-body">${escapeHtml(data)}</div>
+      <div class="card-meta">${formatDateTime(alertDate)}</div>
+    </div>`;
+        }
+
+        const BEIT_SHEMESH = 'בית שמש';
+
+        let lastAlerts = [];
+
+        function getMostRecentAlertId(alerts) {
+            if (!alerts.length) return null;
+            const mostRecent = alerts[0];
+            // Match on location (data), timestamp, and type only—ignore other field changes
+            return `${mostRecent.data}|${mostRecent.alertDate}|${mostRecent.category}`;
+        }
+
+        function getMostRecentFeedId(items) {
+            if (!items.length) return null;
+            const mostRecent = items[0];
+            return `${mostRecent.user_name}|${mostRecent.content}|${mostRecent.date}`;
+        }
+
+        function renderAlerts(data) {
+            lastAlerts = Array.isArray(data) ? data : [];
+
+            const filteredAlerts = settings.locationFilter && settings.locationFilter.trim()
+                ? lastAlerts.filter(a => a.data?.includes(settings.locationFilter))
+                : lastAlerts;
+
+            const currentAlertId = getMostRecentAlertId(filteredAlerts);
+            const hasUpdates = currentAlertId !== mostRecentAlertId;
+
+            if (currentAlertId && currentAlertId !== mostRecentAlertId && mostRecentAlertId !== null) {
+                // Get the category of the most recent alert
+                const mostRecentAlert = filteredAlerts[0];
+                // Only play sound if this is genuinely a new alert (newer alertDate)
+                const newAlertDate = parseAlertDate(mostRecentAlert);
+                if (newAlertDate > mostRecentAlertDate) {
+                    playAlertSound(mostRecentAlert?.category);
+                }
+            }
+
+            if (hasUpdates) {
+                mostRecentAlertId = currentAlertId;
+                if (filteredAlerts.length > 0) {
+                    mostRecentAlertDate = parseAlertDate(filteredAlerts[0]);
+                }
+                applyAlertsFilter();
+                updateTicker(lastAlerts);
+            }
+        }
+
+        function parseAlertDate(alert) {
+            return new Date(alert.alertDate.replace(' ', 'T')).getTime();
+        }
+
+        function applyAlertsFilter() {
+            const alerts = settings.locationFilter && settings.locationFilter.trim()
+                ? lastAlerts.filter(a => a.data?.includes(settings.locationFilter))
+                : lastAlerts;
+
+            const sorted = [...alerts].sort((a, b) => parseAlertDate(b) - parseAlertDate(a));
+
+            document.getElementById('oref-list').innerHTML =
+                sorted.length
+                    ? sorted.map(alertCard).join('')
+                    : '<div class="empty-state">No alerts</div>';
+        }
+
+
+        // ── Emess feed ────────────────────────────────────────────────────────────
+
+        function feedTypeClass(type) {
+            if (type === FEED_TYPE.IMAGE) return 'image';
+            if (type === FEED_TYPE.VIDEO) return 'video';
+            return '';
+        }
+
+        function feedTypeTag(type) {
+            if (type === FEED_TYPE.IMAGE) return '<span class="tag image">IMAGE</span>';
+            if (type === FEED_TYPE.VIDEO) return '<span class="tag video">VIDEO</span>';
+            return '<span class="tag text">TEXT</span>';
+        }
+
+        function feedCard({ type, user_name, content, feed: feedId, rank, replies, date }, categoryName) {
+            return `
+    <div class="card ${feedTypeClass(type)}">
+      <div class="card-row">
+        <div class="card-title">${escapeHtml(user_name)}</div>
+        ${feedTypeTag(type)}
+      </div>
+      <div class="card-body">${escapeHtml(content)}</div>
+      <div class="card-meta">
+        <span class="card-author">${escapeHtml(categoryName)}</span>
+        <span>${formatDateTime(date)}</span>
+      </div>
+    </div>`;
+        }
+
+        function renderFeed(data) {
+            const items = data?.feed ?? [];
+            const categories = data?.feeds ?? [];
+            const categoryById = Object.fromEntries(categories.map(c => [c.id, c.name]));
+            const filteredItems = items.filter(item => categoryById[item.feed] === CONFIG.defaults.feedCategory);
+
+            const currentFeedId = getMostRecentFeedId(filteredItems);
+            const hasUpdates = currentFeedId !== mostRecentFeedId;
+
+            if (hasUpdates) {
+                mostRecentFeedId = currentFeedId;
+                document.getElementById('emess-list').innerHTML =
+                    filteredItems.length
+                        ? filteredItems.map(item => feedCard(item, categoryById[item.feed] ?? `Feed ${item.feed}`)).join('')
+                        : '<div class="empty-state">No posts</div>';
+            }
+        }
+
+
+        // ── Ticker ────────────────────────────────────────────────────────────────
+
+        function updateTicker(alerts) {
+            if (!alerts.length) return;
+            const items = alerts.slice(0, CONFIG.ui.tickerAlertCount)
+                .map(a => `<span class="ticker-item">${escapeHtml(a.title)} — ${escapeHtml(a.data)}</span><span class="ticker-sep">//</span>`)
+                .join('');
+            document.getElementById('ticker-inner').innerHTML = items + items;
+        }
+
+
+        // ── Polling ───────────────────────────────────────────────────────────────
+
+        let pollTimer = null;
+
+        async function poll() {
+            const [orefOk, emessOk] = await Promise.all([
+                fetchAndRender(CONFIG.api.orefUrl, renderAlerts, { error: 'oref-error', updated: 'oref-updated' }),
+                fetchAndRender(CONFIG.api.emessUrl, renderFeed, { error: 'emess-error', updated: 'emess-updated' }),
+            ]);
+
+            document.getElementById('live-dot').className = 'live-dot' + (orefOk || emessOk ? '' : ' error');
+        }
+
+        function startPolling() {
+            clearInterval(pollTimer);
+            // Reset mostRecentAlertId to prevent false sound trigger on first poll (filters may have changed since last session)
+            mostRecentAlertId = null;
+            poll();
+            pollTimer = setInterval(poll, settings.pollInterval);
+        }
+
+
+
+        // Initialize
+        loadSettings();
+        startPolling();
+    </script>
+</body>
+
+</html>
